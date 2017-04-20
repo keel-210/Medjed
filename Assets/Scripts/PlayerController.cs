@@ -4,13 +4,13 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField,Range(0,10)]
+    [SerializeField, Range(0, 10)]
     float Speed;
-    [SerializeField,Range(0,20)]
+    [SerializeField, Range(0, 20)]
     float JumpPower;
     [SerializeField, Tag]
     string Ground;
-    [SerializeField,Tag]
+    [SerializeField, Tag]
     string EnemyAttackTag;
     [SerializeField]
     Vector3 Offset;
@@ -18,28 +18,27 @@ public class PlayerController : MonoBehaviour
     float InvincibleTime;
     [SerializeField]
     Collider2D HitCollider;
+    [SerializeField]
+    EyeRay er, ser;
 
     Rigidbody2D rb;
-    EyeRay er;
     Health health;
-    bool Up, Down,Shot;
+    bool Up, Down, Shot, Alt;
     float Move;
     Vector2 movement;
-    Vector3 MousePos,MouseDir;
+    Vector3 MousePos, MouseDir;
     bool OnGround, JumpStrict, InvincibleFlg;
     //constructer
-    void Start ()
+    void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        er = GetComponent<EyeRay>();
-        er.Offset = Offset;
         health = GetComponent<Health>();
-	}
+    }
     //ForRigidbody
-	void FixedUpdate()
+    void FixedUpdate()
     {
         movement = new Vector2(Move * Speed, rb.velocity.y);
-        if(Move != 0)
+        if (Move != 0)
         {
             rb.velocity = movement;
             transform.rotation = Quaternion.Euler(0, 90 * (Move - 1), 0);
@@ -63,14 +62,27 @@ public class PlayerController : MonoBehaviour
         }
         if (Shot)
         {
-            GameObject hitGO;
-            if (hitGO = er.Emit(MouseDir))
+            if (Alt)
             {
+                GameObject hitGO;
+                if (hitGO = ser.Emit(MouseDir))
+                {
+                }
+                er.Reset();
+            }
+            else
+            {
+                GameObject hitGO;
+                if (hitGO = er.Emit(MouseDir))
+                {
+                }
+                ser.Reset();
             }
         }
         else
         {
             er.Reset();
+            ser.Reset();
         }
         if (InvincibleFlg)
         {
@@ -82,12 +94,13 @@ public class PlayerController : MonoBehaviour
         }
     }
     //ForInput
-	void Update ()
+    void Update()
     {
         Up = Input.GetAxisRaw("Vertical") > 0 || Input.GetAxisRaw("Jump") > 0;
         Down = Input.GetAxisRaw("Vertical") < 0 || Input.GetAxisRaw("Jump") < 0;
         Move = Input.GetAxisRaw("Horizontal");
         Shot = Input.GetAxisRaw("Fire1") > 0;
+        Alt = Input.GetAxisRaw("Fire2") > 0;
         MousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         MouseDir = MousePos - (transform.position + Offset);
         MouseDir = Vector3.Normalize(new Vector3(MouseDir.x, MouseDir.y, 0));
@@ -112,7 +125,7 @@ public class PlayerController : MonoBehaviour
     //ForDamege
     void OnTriggerEnter2D(Collider2D obj)
     {
-        if(obj.tag == EnemyAttackTag)
+        if (obj.tag == EnemyAttackTag)
         {
             EnemyAttack ea = obj.GetComponent<EnemyAttack>();
             Debug.Log("hit" + ea.Damage);
