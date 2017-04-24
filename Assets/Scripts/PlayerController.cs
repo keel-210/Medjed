@@ -27,6 +27,11 @@ public class PlayerController : MonoBehaviour
     Vector2 movement;
     Vector3 MousePos,MouseDir;
     bool OnGround, JumpStrict, InvincibleFlg;
+    Dir FixState;
+    enum Dir
+    {
+        None,Up,Down,Right,Left
+    }
     //constructer
     void Start ()
     {
@@ -38,48 +43,9 @@ public class PlayerController : MonoBehaviour
     //ForRigidbody
 	void FixedUpdate()
     {
-        movement = new Vector2(Move * Speed, rb.velocity.y);
-        if(Move != 0)
-        {
-            rb.velocity = movement;
-            transform.rotation = Quaternion.Euler(0, 90 * (Move - 1), 0);
-        }
-        else
-        {
-            rb.velocity = new Vector2(0, rb.velocity.y);
-        }
-        if (Up && !Down && !JumpStrict)
-        {
-            rb.velocity += new Vector2(0, JumpPower);
-            JumpStrict = true;
-        }
-        if (Down)
-        {
-            gameObject.layer = 11;
-        }
-        else
-        {
-            gameObject.layer = 9;
-        }
-        if (Shot)
-        {
-            GameObject hitGO;
-            if (hitGO = er.Emit(MouseDir))
-            {
-            }
-        }
-        else
-        {
-            er.Reset();
-        }
-        if (InvincibleFlg)
-        {
-            HitCollider.enabled = false;
-        }
-        else
-        {
-            HitCollider.enabled = true;
-        }
+        Movement();
+        ShotRay();
+        Invincible();
     }
     //ForInput
 	void Update ()
@@ -96,10 +62,39 @@ public class PlayerController : MonoBehaviour
     //ForOnGround
     void OnCollisionEnter2D(Collision2D obj)
     {
-        if (obj.gameObject.tag == Ground && rb.velocity.y <= 0)
+        if (obj.gameObject.tag == Ground)
         {
             OnGround = true;
             JumpStrict = false;
+            Vector2 contact = obj.contacts[0].point - new Vector2(transform.position.x, transform.position.y);
+            if(Mathf.Abs(contact.x) > Mathf.Abs(contact.y))
+            {
+                if(contact.x > 0)
+                {
+                    FixState = Dir.Right;
+                    rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+                }
+                else
+                {
+                    FixState = Dir.Left;
+                    rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+                }
+            }
+            else
+            {
+                if (contact.y > 0)
+                {
+                    FixState = Dir.Up;
+                    rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+                    rb.velocity = Vector2.zero;
+                }
+                else
+                {
+                    FixState = Dir.Down;
+                    rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+                    rb.velocity = Vector2.zero;
+                }
+            }
         }
     }
     void OnCollisionExit2D(Collision2D obj)
@@ -107,6 +102,8 @@ public class PlayerController : MonoBehaviour
         if (obj.gameObject.tag == Ground)
         {
             OnGround = false;
+            FixState = Dir.None;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
     }
     //ForDamege
@@ -130,5 +127,102 @@ public class PlayerController : MonoBehaviour
     void GameOver()
     {
 
+    }
+    void Movement()
+    {
+        rb.velocity = new Vector2(Move * Speed, rb.velocity.y);
+        switch (FixState)
+        {
+            case Dir.Up: FixUp(); break;
+            case Dir.Down: FixDown(); break;
+            case Dir.Right: FixRight(); break;
+            case Dir.Left: FixLeft(); break;
+            default: break;
+        }
+    }
+    void FixUp()
+    {
+        rb.velocity = new Vector2(Move * Speed, 0);
+        if (Down)
+        {
+            FixState = Dir.None;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.velocity += new Vector2(0, -JumpPower);
+        }
+    }
+    void FixDown()
+    {
+        rb.velocity = new Vector2(Move * Speed, 0);
+        if (Up)
+        {
+            FixState = Dir.None;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.velocity += new Vector2(0, JumpPower);
+        }
+    }
+    void FixRight()
+    {
+        if (Up)
+        {
+            rb.velocity = new Vector2(0, Speed);
+        }
+        else if (Down)
+        {
+            rb.velocity = new Vector2(0, -Speed);
+        }
+        else
+        {
+            rb.velocity = new Vector2(Speed, 0);
+        }
+        if(Move < 0)
+        {
+            FixState = Dir.None;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        }
+    }
+    void FixLeft()
+    {
+        if (Up)
+        {
+            rb.velocity = new Vector2(0, Speed);
+        }
+        else if (Down)
+        {
+            rb.velocity = new Vector2(0, -Speed);
+        }
+        else
+        {
+            rb.velocity = new Vector2(-Speed, 0);
+        }
+        if (Move > 0)
+        {
+            FixState = Dir.None;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        }
+    }
+    void ShotRay()
+    {
+        if (Shot)
+        {
+            GameObject hitGO;
+            if (hitGO = er.Emit(MouseDir))
+            {
+            }
+        }
+        else
+        {
+            er.Reset();
+        }
+    }
+    void Invincible()
+    {
+        if (InvincibleFlg)
+        {
+            HitCollider.enabled = false;
+        }
+        else
+        {
+            HitCollider.enabled = true;
+        }
     }
 }
